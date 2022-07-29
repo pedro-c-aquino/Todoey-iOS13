@@ -8,6 +8,7 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
 class ToDoListViewController: SwipeTableViewController {
     
@@ -23,6 +24,52 @@ class ToDoListViewController: SwipeTableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        tableView.separatorStyle = .none
+        
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        if let colorHex = selectedCategory?.color {
+            
+            /*
+                       First we set the title to match the category. We know that it exist since we are inside our if let statement here:
+                       */
+                      title = selectedCategory!.name
+           
+                      /*
+                       Set the colour to use here:
+                       */
+                      let theColourWeAreUsing = UIColor(hexString: colorHex)!
+           
+                      /*
+                       Then let us set the background colour of the search bar as well:
+                       */
+//                      searchBar.barTintColor = theColourWeAreUsing
+           
+                      /*
+                       THen we will set the colours. Using navigationController?.navigationBar.backgroundColor is not an option here because in iOS 13, the status bar at the very top does not change colour (strangely enough). After Googling this, I found a solution where they use UINavigationBarAppearance() instead.
+                       */
+                      let navBarAppearance = UINavigationBarAppearance()
+                      let navBar = navigationController?.navigationBar
+                      let navItem = navigationController?.navigationItem
+                      navBarAppearance.configureWithOpaqueBackground()
+           
+                      /*
+                       We use Chameleon's ContrastColorOf() function to set the colour of the text based on the colour we use. If it is dark, the text is light, and vice versa.
+                       */
+                      let contrastColour = ContrastColorOf(theColourWeAreUsing, returnFlat: true)
+           
+                      navBarAppearance.titleTextAttributes = [.foregroundColor: contrastColour]
+                      navBarAppearance.largeTitleTextAttributes = [.foregroundColor: contrastColour]
+                      navBarAppearance.backgroundColor = theColourWeAreUsing
+                      navItem?.rightBarButtonItem?.tintColor = contrastColour
+                      navBar?.tintColor = contrastColour
+                      navBar?.standardAppearance = navBarAppearance
+                      navBar?.scrollEdgeAppearance = navBarAppearance
+           
+                      self.navigationController?.navigationBar.setNeedsLayout()
+        }
+
     }
     
     //MARK - Tableview Datasource Methods
@@ -38,6 +85,12 @@ class ToDoListViewController: SwipeTableViewController {
         if let item = todoItems?[indexPath.row] {
             cell.textLabel?.text = item.title
             
+            if let color = UIColor(hexString: selectedCategory!.color)?.darken(byPercentage: CGFloat(indexPath.row)/CGFloat(todoItems!.count))
+            {
+                cell.backgroundColor = color
+                cell.textLabel?.textColor = ContrastColorOf(color, returnFlat: true)
+            }
+                                                
             cell.accessoryType = item.done ? .checkmark : .none
         } else {
             cell.textLabel?.text = "No Items Added"
@@ -105,7 +158,7 @@ class ToDoListViewController: SwipeTableViewController {
     
     func loadItems() {
         
-        todoItems = selectedCategory?.items.sorted(byKeyPath: "title", ascending: true)
+        todoItems = selectedCategory?.items.sorted(byKeyPath: "title", ascending: false)
         tableView.reloadData()
         
     }
